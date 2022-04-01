@@ -1,0 +1,160 @@
+package controllers;
+
+import java.io.IOException;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import javax.sql.DataSource;
+
+import student.Student;
+import utils.StudentDBUtil;
+
+@WebServlet("/StudentControllerServlet")
+public class StudentControllerServlet extends HttpServlet {
+
+	private static final long serialVersionUID = 1L;
+
+	private StudentDBUtil studentDBUtil;
+
+	@Resource(name = "jdbc/web_QLLop")
+	private DataSource dataSource;
+
+	@Override
+	public void init() throws ServletException {
+		super.init();
+
+		try {
+			studentDBUtil = new StudentDBUtil(dataSource);
+		} catch (Exception e) {
+			throw new ServletException(e);
+		}
+	}
+
+	@Override
+	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+//		response.getWriter().append("Served at: ").append(request.getContextPath());
+
+		try {
+			String theCommand = req.getParameter("command");
+
+			if (theCommand == null) {
+				theCommand = "LIST";
+			}
+
+			switch (theCommand) {
+			case "LIST": {
+
+				listStudent(req, resp);
+				break;
+			}
+			case "ADD": {
+
+				addStudent(req, resp);
+				System.out.println("ADD \n\n\n");
+				break;
+			}
+			case "LOAD": {
+				System.out.println("load student");
+
+				loadStudent(req, resp);
+				break;
+			}
+			case "UPDATE": {
+				System.out.println("update form student");
+
+				updateStudent(req, resp);
+				break;
+			}
+			case "DELETE": {
+				System.out.println("DELETE");
+
+				deleteStudent(req, resp);
+				break;
+			}
+			case "SHOWDETAIL": {
+				System.out.println("SHOWDETAIL");
+
+				showStudentClassroom(req, resp); 
+				break;
+			}
+			default:
+				listStudent(req, resp);
+			}
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+	}
+
+	private void listStudent(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		System.out.println("tesst");
+		List<Student> students = studentDBUtil.getStudents();
+		System.out.println("\nlist student -size:" + students.size());
+
+		req.setAttribute("STUDENT_LIST", students);
+
+		RequestDispatcher dispatcher = req.getRequestDispatcher("list-student.jsp");
+		dispatcher.forward(req, res);
+	}
+
+	private void addStudent(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		String firstName = req.getParameter("firstName");
+		String lastName = req.getParameter("lastName");
+		String email = req.getParameter("email");
+
+		Student theStudent = new Student(firstName, lastName, email);
+
+		studentDBUtil.addStudent(theStudent);
+
+		listStudent(req, res);
+	}
+
+	private void loadStudent(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		String theStudentId = req.getParameter("studentId");
+		System.out.println("\n load StudentId: " + theStudentId);
+		Student student = studentDBUtil.getStudent(theStudentId);
+
+		System.out.println("load student for update: " + student.toString());
+
+		req.setAttribute("THE_STUDENT", student);
+		RequestDispatcher dispatcher = req.getRequestDispatcher("update-student-form.jsp");
+		dispatcher.forward(req, res);
+
+	}
+
+	private void updateStudent(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		int theStudentId = Integer.parseInt(req.getParameter("studentId"));
+		String firstName = req.getParameter("firstName");
+		String lastName = req.getParameter("lastName");  
+		String email = req.getParameter("email");
+
+		Student theStudent = new Student(theStudentId, firstName, lastName, email);
+		studentDBUtil.updateStudent(theStudent);
+
+		listStudent(req, res);
+
+	}
+
+	private void deleteStudent(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		String theStudentId = req.getParameter("studentId");
+		studentDBUtil.deleteStudent(theStudentId);
+		listStudent(req, res);
+	}
+	
+	private void showStudentClassroom(HttpServletRequest req, HttpServletResponse res) throws Exception {
+		int idClass = Integer.parseInt(req.getParameter("classroomId"));
+		List<Student> students = studentDBUtil.getStudentsByClass(idClass);
+
+		req.setAttribute("STUDENT_LIST", students); 
+
+		RequestDispatcher dispatcher = req.getRequestDispatcher("list-student.jsp"); 
+		dispatcher.forward(req, res);     
+	}
+}
